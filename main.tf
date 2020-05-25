@@ -354,3 +354,58 @@ resource "aws_route53_record" "master_node_internal_dns" {
   records = aws_instance.master.*.private_ip
 }
 
+#
+# Worker node instance
+#
+
+resource "aws_instance" "worker" {
+  count         = var.workers_count
+  ami           = data.aws_ami.atomic_linux.id
+  instance_type = "t2.xlarge"
+  root_block_device {
+    volume_size           = 48
+    delete_on_termination = true
+  }
+  ebs_block_device {
+    device_name = "/dev/xvdb"
+    volume_size = 64
+  }
+  iam_instance_profile = aws_iam_instance_profile.ocp_instance_profile.id
+  subnet_id            = var.public_subnet_ids[count.index % length(var.public_subnet_ids)]
+  vpc_security_group_ids = [
+    aws_security_group.sg_nodes.id
+  ]
+  key_name  = var.openshift_key_pair
+  user_data = data.template_file.node-cloudinit.rendered
+  tags = merge(
+    var.tags,
+    map("Name", format("%s-worker-%s", var.name, count.index)),
+    map("DNS", format("worker-%s.%s", count.index, var.dns_name)),
+    map("KubernetesCluster", var.name),
+    map(format("kubernetes.io/cluster/%s", var.name), "owned"),
+    map("node-role.kubernetes.io/compute", "true")
+  )
+}
+
+#
+# Worker nodes dns
+#
+
+resource "aws_route53_record" "worker_node_dns" {
+  count   = var.workers_count
+  zone_id = var.dns_zone
+  name    = format("worker-%s.%s", count.index, var.dns_name)
+  type    = "A"
+  ttl     = 60
+  records = aws_instance.worker[count.index].*.public_ip
+}
+
+resource "aws_route53_record" "worker_node_internal_dns" {
+  count   = var.workers_count
+  zone_id = var.dns_zone
+  name    = format("worker-%s-int.%s", count.index, var.dns_name)
+  type    = "A"
+  ttl     = 60
+  records = aws_instance.worker[count.index].*.private_ip
+}
+

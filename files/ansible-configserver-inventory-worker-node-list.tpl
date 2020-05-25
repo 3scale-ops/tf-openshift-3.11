@@ -1,0 +1,1 @@
+${node} openshift_node_group_name='node-config-compute' openshift_public_hostname=${node}

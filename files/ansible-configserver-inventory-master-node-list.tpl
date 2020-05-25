@@ -1,0 +1,1 @@
+${node} openshift_node_group_name='node-config-master-infra' openshift_schedulable=true openshift_public_hostname=${hostname}

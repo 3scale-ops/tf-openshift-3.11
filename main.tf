@@ -58,6 +58,9 @@ data "template_file" "ansible_configserver_userdata" {
   template = file("${path.module}/files/ansible-configserver-userdata.sh")
 }
 
+data "template_file" "ansible_configserver_run" {
+  template = file("${path.module}/files/ansible-configserver-run.sh")
+}
 
 data "template_file" "inventory_master_nodes_list" {
   template = file("${path.module}/files/ansible-configserver-inventory-master-node-list.tpl")
@@ -129,6 +132,31 @@ resource "aws_instance" "ansible_configserver" {
     }
   }
 
+  provisioner "file" {
+    content     = data.template_file.ansible_configserver_run.rendered
+    destination = "~/ansible-configserver-run.sh"
+
+    connection {
+      type  = "ssh"
+      user  = "ec2-user"
+      agent = true
+      host  = self.public_ip
+    }
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x ~/ansible-configserver-run.sh",
+      "~/ansible-configserver-run.sh"
+    ]
+
+    connection {
+      type  = "ssh"
+      user  = "ec2-user"
+      agent = true
+      host  = self.public_ip
+    }
+  }
   timeouts {
     create = "3h"
     delete = "3h"

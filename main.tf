@@ -409,3 +409,23 @@ resource "aws_route53_record" "worker_node_internal_dns" {
   records = aws_instance.worker[count.index].*.private_ip
 }
 
+#
+# Cluster domains
+#
+
+resource "aws_route53_record" "master_dns" {
+  zone_id = var.dns_zone
+  name    = format("master.%s", var.dns_name)
+  type    = "A"
+  ttl     = 60
+  records = aws_instance.master[0].*.public_ip
+}
+
+resource "aws_route53_record" "apps_dns" {
+  zone_id = var.dns_zone
+  name    = format("*.apps.%s", var.dns_name)
+  type    = "A"
+  ttl     = 60
+  records = aws_instance.master[0].*.public_ip
+}
+

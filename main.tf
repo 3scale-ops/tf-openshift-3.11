@@ -157,6 +157,16 @@ resource "aws_instance" "ansible_configserver" {
       host  = self.public_ip
     }
   }
+
+  depends_on = [
+    aws_instance.master,
+    aws_route53_record.master_dns,
+    aws_route53_record.apps_dns,
+    aws_route53_record.master_node_dns,
+    aws_instance.worker,
+    aws_route53_record.worker_node_dns
+  ]
+
   timeouts {
     create = "3h"
     delete = "3h"

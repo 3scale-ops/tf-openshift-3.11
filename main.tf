@@ -59,6 +59,40 @@ data "template_file" "ansible_configserver_userdata" {
 }
 
 
+data "template_file" "inventory_master_nodes_list" {
+  template = file("${path.module}/files/ansible-configserver-inventory-master-node-list.tpl")
+  count    = length(aws_instance.master)
+  vars = {
+    node     = format("master-%s-int.%s", count.index, var.dns_name)
+    hostname = format("master.%s", var.dns_name)
+  }
+}
+
+data "template_file" "inventory_worker_nodes_list" {
+  template = file("${path.module}/files/ansible-configserver-inventory-worker-node-list.tpl")
+  count    = length(aws_instance.worker)
+  vars = {
+    node = format("worker-%s-int.%s", count.index, var.dns_name)
+  }
+}
+
+data "template_file" "inventory" {
+  template = file("${path.module}/files/ansible-configserver-inventory.tpl")
+  vars = {
+    cluster_id         = var.name
+    aws_access_key     = aws_iam_access_key.ocp_iam_user.id
+    aws_secret_key     = aws_iam_access_key.ocp_iam_user.secret
+    oreg_auth_user     = var.oreg_auth_user
+    oreg_auth_password = var.oreg_auth_password
+    admin_password     = var.admin_password
+    cluster_hostname   = format("master.%s", var.dns_name)
+    default_subdomain  = format("apps.%s", var.dns_name)
+    master_nodes_list  = join("\n", data.template_file.inventory_master_nodes_list.*.rendered)
+    worker_nodes_list  = join("\n", data.template_file.inventory_worker_nodes_list.*.rendered)
+    identity_providers = var.identity_providers
+  }
+}
+
 resource "aws_instance" "ansible_configserver" {
   count         = 1
   ami           = data.aws_ami.amazon_linux.id
@@ -82,6 +116,18 @@ resource "aws_instance" "ansible_configserver" {
     map(format("kubernetes.io/cluster/%s", var.name), "owned"),
     map("node-role.kubernetes.io/configserver", "true")
   )
+
+  provisioner "file" {
+    content     = data.template_file.inventory.rendered
+    destination = "~/openshift-ansible-inventory.cfg"
+
+    connection {
+      type  = "ssh"
+      user  = "ec2-user"
+      agent = true
+      host  = self.public_ip
+    }
+  }
 
   timeouts {
     create = "3h"

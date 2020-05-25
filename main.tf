@@ -166,3 +166,59 @@ resource "aws_instance" "ansible_configserver" {
 
 }
 
+
+#
+# OCP AWS IAM User
+#
+
+# User for openshift-only permissions
+resource "aws_iam_user" "ocp_iam_user" {
+  name = format("%s-user", var.name)
+  path = "/"
+}
+
+# Access key for openshift-only permissions
+resource "aws_iam_access_key" "ocp_iam_user" {
+  user = aws_iam_user.ocp_iam_user.name
+}
+
+# OCP user policy for openshift-only permissions
+resource "aws_iam_user_policy" "ocp_iam_user_policy" {
+  name   = format("%s-user-policy", var.name)
+  user   = aws_iam_user.ocp_iam_user.name
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeVolume*",
+        "ec2:CreateVolume",
+        "ec2:CreateTags",
+        "ec2:DescribeInstance*",
+        "ec2:AttachVolume",
+        "ec2:DetachVolume",
+        "ec2:DeleteVolume",
+        "ec2:DescribeSubnets",
+        "ec2:CreateSecurityGroup",
+        "ec2:DescribeSecurityGroups",
+        "elasticloadbalancing:DescribeTags",
+        "elasticloadbalancing:CreateLoadBalancerListeners",
+        "ec2:DescribeRouteTables",
+        "elasticloadbalancing:ConfigureHealthCheck",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "elasticloadbalancing:DeleteLoadBalancerListeners",
+        "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "elasticloadbalancing:CreateLoadBalancer",
+        "elasticloadbalancing:DeleteLoadBalancer",
+        "elasticloadbalancing:ModifyLoadBalancerAttributes",
+        "elasticloadbalancing:DescribeLoadBalancerAttributes"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}

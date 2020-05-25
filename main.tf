@@ -25,6 +25,32 @@ data "aws_ami" "atomic_linux" {
 }
 
 #
+# Intra cluster security group
+#
+
+resource "aws_security_group" "sg_nodes" {
+  name        = format("%s-nodes-sg", var.name)
+  description = "OpenShift instance security groups"
+  vpc_id      = var.vpc_id
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = merge(
+    var.tags,
+    map("Name", format("%s-nodes-sg", var.name))
+  )
+}
+
+#
 # Ansible Configserver instance
 #
 

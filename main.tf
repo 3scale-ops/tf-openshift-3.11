@@ -166,6 +166,81 @@ resource "aws_instance" "ansible_configserver" {
 
 }
 
+#
+# Node intances
+#
+
+data "template_file" "node-cloudinit" {
+  template = file("${path.module}/files/node-cloudinit.tpl")
+  vars = {
+    quay_registry_auth   = var.quay_registry_auth
+    redhat_registry_auth = var.redhat_registry_auth
+  }
+}
+
+#
+# Node instances role
+#
+
+# Instance role
+resource "aws_iam_role" "ocp_instance_role" {
+  name               = format("%s-instance-role", var.name)
+  assume_role_policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Principal": {
+                "Service": "ec2.amazonaws.com"
+            },
+            "Effect": "Allow",
+            "Sid": ""
+        }
+    ]
+}
+EOF
+}
+
+# Instance profile for the role
+resource "aws_iam_instance_profile" "ocp_instance_profile" {
+  name = format("%s-instance-profile", var.name)
+  role = aws_iam_role.ocp_instance_role.name
+}
+
+# Policy for log forwarding
+resource "aws_iam_policy" "ocp_forward_logs_iam_policy" {
+  name        = format("%s-forward-logs-policy", var.name)
+  path        = "/"
+  description = "Allows an instance to forward logs to CloudWatch"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": [
+        "arn:aws:logs:*:*:*"
+      ]
+    }
+  ]
+}
+EOF
+}
+
+# Log forwarding policy attachment
+resource "aws_iam_policy_attachment" "ocp_forward_logs_iam_policy_attachment" {
+  name       = "openshift-attachment-forward-logs"
+  roles      = [aws_iam_role.ocp_instance_role.name]
+  policy_arn = aws_iam_policy.ocp_forward_logs_iam_policy.arn
+}
 
 #
 # OCP AWS IAM User

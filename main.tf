@@ -297,3 +297,60 @@ resource "aws_iam_user_policy" "ocp_iam_user_policy" {
 }
 EOF
 }
+
+#
+# Master node instance
+#
+
+resource "aws_instance" "master" {
+  count         = var.masters_count
+  ami           = data.aws_ami.atomic_linux.id
+  instance_type = "t2.2xlarge"
+  root_block_device {
+    volume_size           = 48
+    delete_on_termination = true
+  }
+  ebs_block_device {
+    device_name = "/dev/xvdb"
+    volume_size = 64
+  }
+  iam_instance_profile = aws_iam_instance_profile.ocp_instance_profile.id
+  subnet_id            = var.public_subnet_ids[count.index % length(var.public_subnet_ids)]
+  vpc_security_group_ids = [
+    aws_security_group.sg_nodes.id
+  ]
+  key_name  = var.openshift_key_pair
+  user_data = data.template_file.node-cloudinit.rendered
+  tags = merge(
+    var.tags,
+    map("Name", format("%s-master-%s", var.name, count.index)),
+    map("DNS", format("master-%s.%s", count.index, var.dns_name)),
+    map("KubernetesCluster", var.name),
+    map(format("kubernetes.io/cluster/%s", var.name), "owned"),
+    map("node-role.kubernetes.io/master", "true"),
+    map("node-role.kubernetes.io/infra", "true")
+  )
+}
+
+#
+# Master nodes dns
+#
+
+resource "aws_route53_record" "master_node_dns" {
+  count   = var.masters_count
+  zone_id = var.dns_zone
+  name    = format("master-%s.%s", count.index, var.dns_name)
+  type    = "A"
+  ttl     = 60
+  records = aws_instance.master.*.public_ip
+}
+
+resource "aws_route53_record" "master_node_internal_dns" {
+  count   = var.masters_count
+  zone_id = var.dns_zone
+  name    = format("master-%s-int.%s", count.index, var.dns_name)
+  type    = "A"
+  ttl     = 60
+  records = aws_instance.master.*.private_ip
+}
+

@@ -1,5 +1,8 @@
 # tf-openshift-3.11
 
+[![format-tests](https://github.com/3scale-ops/tf-openshift-3.11/workflows/format-tests/badge.svg)](https://github.com/3scale-ops/tf-openshift-3.11/actions/workflows/format-tests.yaml?query=workflow%3Aformat-tests)
+[![license](https://badgen.net/github/license/3scale-ops/tf-openshift-3.11)](https://github.com/3scale-ops/tf-openshift-3.11/blob/main/LICENSE)
+
 Terraform module to deploy the OpenShift 3.11 cluster required infrastructure and deploys the cluster from an ansible server.
 
 - [tf-openshift-3.11](#tf-openshift-311)
@@ -48,8 +51,8 @@ Once the instances are created, it will deploy an ansible configserver pointed b
 This instance will:
 
   - Install basic dependencies required for the cluster deployment (using the user-data)
-  - Copy the rendender ansible inventory with the list of nodes created before [~/openshift-ansible-inventory.cfg](../../modules/ocp3-11/files/ansible-configserver-inventory.tpl)
-  - Copy and run the installer script [~/ansible-configserver-run.sh](../../modules/ocp3-11/files/ansible-configserver-run.sh) that will:
+  - Copy the rendender ansible inventory with the list of nodes created before [~/openshift-ansible-inventory.cfg](files/ansible-configserver-inventory.tpl)
+  - Copy and run the installer script [~/ansible-configserver-run.sh](files/ansible-configserver-run.sh) that will:
     - Wait for cloud-init completion
     - Checkout openshfit-ansible 3.11 GitHub repo
     - Apply with ansible the `prerequisites` playbook using the rendered inventory

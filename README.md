@@ -63,7 +63,7 @@ This instance will:
 
 ```terraform
 module "ocp3_11_cluster" {
-  source               = "git@github.com:3scale/tf-openshift-3.11.git?ref=tags/v0.1"
+  source               = "git@github.com:3scale-ops/tf-openshift-3.11.git?ref=tags/v0.1"
   name                 = "ocp3-11-example"
   openshift_key_pair   = "ec2-key"
   dns_zone             = "ZABCD12345"
